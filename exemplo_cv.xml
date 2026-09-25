@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lattes xmlns="http://lattes.org/2023/06/01/XMLSchema">
+  <tituloPrincipal>Dr. Maria Oliveira</tituloPrincipal>
+  <areaConcentracao>CIENCIAS BIOLOGICAS</areaConcentracao>
+
+  <formacao>
+    <nivelFormacao>DOUTORADO</nivelFormacao>
+    <tituloRealizado>Doutorado em Ciencias Biologicas</tituloRealizado>
+    <instituicao>Universidade Federal de Exemplo</instituicao>
+    <areaEnsino>Biologia</areaEnsino>
+    <anoInicio>2015</anoInicio>
+  </formacao>
+
+  <formacao>
+    <nivelFormacao>MESTRADO</nivelFormacao>
+    <tituloRealizado>Mestrado em Ecologia</tituloRealizado>
+    <instituicao>Universidade Estadual de Exemplo</instituicao>
+    <areaEnsino>Biologia</areaEnsino>
+    <anoInicio>2012</anoInicio>
+  </formacao>
+
+  <linhaPesquisa>
+    <nomeDaLinhaPesquisa>Mudancas Climaticas e Ecossistemas Terrestres</nomeDaLinhaPesquisa>
+    <areaConcentracaoDaLinhaPesquisa>Elogia</areaConcentracaoDaLinhaPesquisa>
+  </linhaPesquisa>
+
+  <publicacao>
+    <tipo>ARTIGO_PUBLICADO</tipo>
+    <tituloDoTrabalho>Impactos do Aquecimento Global sobre a Biodiversidade Florestal</tituloDoTrabalho>
+    <nomeDoPeriodico>Revista Brasileira de Ecologia</nomeDoPeriodico>
+  </publicacao>
+
+  <publicacao>
+    <tipo>ARTIGO_PUBLICADO</tipo>
+    <tituloDoTrabalho>Tratamentos para Doencas Cronicas Nao Transmissiveis</tituloDoTrabalho>
+    <nomeDaRevista>Journal of Health Sciences</nomeDaRevista>
+  </publicacao>
+
+  <publicacao>
+    <tipo>ARTIGO_PUBLICADO</tipo>
+    <tituloDoTrabalho>Monitoramento de CO2 em Florestas Tropicais</tituloDoTrabalho>
+    <nomeDoPeriodico>Global Change Biology</nomeDoPeriodico>
+  </publicacao>
+
+  <publicacao>
+    <tipo>ARTIGO_PUBLICADO</tipo>
+    <tituloDoTrabalho>Tecnologias Digitais para Inovacao Educacional</tituloDoTrabalho>
+    <nomeDoPeriodico>Revista Brasileira de Educacao</nomeDoPeriodico>
+  </publicacao>
+
+  <publicacao>
+    <tipo>LIVRO_PUBLICADO</tipo>
+    <tituloDaObra>Guia de Educacao Ambiental e Mudancas Climaticas</tituloDaObra>
+    <nomeDaEditora>Editora Universitaria</nomeDaEditora>
+  </publicacao>
+
+  <projeto>
+    <tipo>PROJETO_PESQUISA</tipo>
+    <nomeDoProjeto>Conservacao de Mativa Nativa e Recursos Hidricos</nomeDoProjeto>
+    <descricaoDoProjeto>Projeto de conservacao de florestas e recursos hidricos no Cerrado</descricaoDoProjeto>
+  </projeto>
+
+  <resumo>
+    <resumodoCurriculo>Professor e pesquisador em Biologia com foco em ecologia, educacao de qualidade e mudancas climaticas.</resumodoCurriculo>
+  </resumo>
+
+  <palavrasChave>
+    <palavraChave>ecologia</palavraChave>
+    <palavraChave>mudancas climaticas</palavraChave>
+    <palavraChave>biodiversidade</palavraChave>
+    <palavraChave>educacao</palavraChave>
+  </palavrasChave>
+</lattes>
