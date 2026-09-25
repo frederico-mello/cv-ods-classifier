@@ -2,6 +2,10 @@
 
 > Documento de arquitetura do sistema **Lattes‑SDG**: um servidor MCP que analisa um
 > Currículo Lattes e classifica o quanto ele atende a cada um dos **17 ODS da ONU**.
+>
+> **v2 · set/2026** — revisado com pesquisa de estado da arte: as pistas dos ODS nascem de
+> taxonomias abertas (SDSN, Elsevier, Aurora — D9), há um caminho híbrido definido para ML
+> (D10) e todos os diagramas foram verificados.
 
 Este pacote é o **entregável de arquitetura**. O código em `lattes_sdg/` é um
 rascunho de referência (a implementação vive na raiz do projeto, fora deste `docs/`).
@@ -21,7 +25,8 @@ rascunho de referência (a implementação vive na raiz do projeto, fora deste `
 | 07 | [Requisitos não‑funcionais](07-nf.md) | Quem cuida da qualidade | "Determinismo, segurança, performance?" |
 | 08 | [Decisões de arquitetura](08-decisions.md) | Quem avalia opções | "Por que cada escolha foi feita?" |
 | 09 | [Glossário](09-glossario.md) | Não‑TI | "O que significa ODS, MCP, XML, score?" |
-| 10 | [Visão do código](10-estrutura.md) | Quem vai mexer na implementação | "Onde cada coisa vive no repo?" |
+| 10 | [Estrutura do código](10-estrutura.md) | Quem vai mexer na implementação | "Onde cada coisa vive no repo?" |
+| 11 | [Estado da arte](11-estado-da-arte.md) | Quem valida as escolhas | "Quem já fez isso e o que aproveitamos?" |
 
 > **Regra deste pacote:** cada documento é independente. Você pode abrir qualquer um
 > e entender o assunto dele sem ler os outros — mas eles formam uma história única.

@@ -77,6 +77,11 @@ E o melhor: o sistema mostra **onde** cada luz acesceu. Se ele deu nota alta ao 
 mostra: *"foi porque seu currículo fala de clima aqui, aqui e aqui."* Isso evita que a
 conta chegue a ser um mistério — dá pra ver **por que** a nota é aquela.
 
+**De onde vêm as pistas (v2):** as listas de palavras de cada ODS não são inventadas por
+nós. Elas nascem de **listas públicas** de quem já mapeia ciência em ODS — a rede **SDSN**
+da ONU, a editora **Elsevier** e a rede de universidades **Aurora** — traduzidas para o
+português e adaptadas ao jeito de falar do Lattes.
+
 ---
 
 ## Por que isso é útil?

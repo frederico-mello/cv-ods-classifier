@@ -68,7 +68,7 @@ A soma bruta é convertida em nota de 0 a 100 por uma **curva exponencial**:
 nota = 100 × (1 − e^(−soma ÷ K))
 ```
 
-onde **K** é um número que controla a "velocidade" da curva (no código, K = 1,4).
+onde **K** é um número que controla a "velocidade" da curva (no rascunho, K = 2,3 — valor recalibrado na v2; ver o exemplo da seção 4).
 
 ```mermaid
 xyChart

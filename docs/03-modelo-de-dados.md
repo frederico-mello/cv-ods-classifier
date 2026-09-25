@@ -31,6 +31,7 @@ classDiagram
         +descricao o que significa
         +palavras[] pistas-chave
         +temas[] sinônimos amplos
+        +origem[] fonte de cada pista
     }
     class Scorer {
         +analyze(curriculo) resultado

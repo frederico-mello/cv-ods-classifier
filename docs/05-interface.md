@@ -125,7 +125,7 @@ mesmo cabo.
 flowchart LR
     C["Cliente (goose)"]
     C <-->|"JSON-RPC sobre stdio"| S["Servidor MCP"]
-    S -.-> "não precisa de internet" .-> N["conexão local"]
+    S -.->|"não precisa de internet"| N["conexão local"]
 ```
 
 > **Por que stdio?** É o padrão dos servidores locais (como este). É rápido, simples e

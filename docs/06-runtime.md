@@ -24,7 +24,7 @@ flowchart TB
         PKG --> L4["server.py"]
         PKG --> SDK["SDK MCP (mcp)"]
     end
-    SDK -.-> "fornece stdio + JSON-RPC" .-> L4
+    SDK -.->|"fornece stdio + JSON-RPC"| L4
 ```
 
 > **Lembrete:** o SDK do MCP (`mcp`) é a única dependência. Ele já vem instalado no

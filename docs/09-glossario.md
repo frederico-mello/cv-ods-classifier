@@ -28,7 +28,7 @@ garantir educação de qualidade. No nosso sistema, cada ODS vale uma nota de 0 
 > só **avalia** o quanto o seu trabalho contribui para cada uma delas.
 
 ### Lattes
-É o **currículo oficial** dos pesquisadores do Brasil, feito pela CAPES. Todo professor,
+É o **currículo oficial** dos pesquisadores do Brasil, mantido pelo CNPq. Todo professor,
 pesquisador e estudante de mestrado/doutorado tem um. Ele é um arquivo especial (um XML)
 que lista formação, publicações, projetos, etc.
 

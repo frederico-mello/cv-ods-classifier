@@ -23,6 +23,7 @@ de explicações para não‑TI. Abra o [`docs/README.md`](docs/README.md) para 
 | 08 | [Decisões](docs/08-decisions.md) | Por que cada escolha |
 | 09 | [Glossário](docs/09-glossario.md) | Palavras técnicas |
 | 10 | [Estrutura do código](docs/10-estrutura.md) | Para quem vai codar |
+| 11 | [Estado da arte](docs/11-estado-da-arte.md) | O que já existe e o que aproveitamos |
 
 ---
 
@@ -49,7 +50,7 @@ flowchart TB
         S --> R["4 · ReportBuilder<br/>nota → JSON"]
         S --> TAX["2 · SDGTaxonomy<br/>17 ODS + pistas"]
     end
-    CLIENTE -.-> "arquivo .xml" .-> P
+    CLIENTE -->|"arquivo .xml"| P
 ```
 
 | # | Camada | Arquivo | Função |
@@ -119,6 +120,11 @@ cv-ods-classifier/
 
 ## Status
 
-- ✅ Implementação funcionando
-- ✅ 9/9 testes passando
+- ✅ Implementação de referência (rascunho) commitada
+- ✅ Testes: **9/9 passando** (confirmado na revisão v2, set/2026)
 - ✅ Pacote de arquitetura completo em `docs/`
+- ✅ v2 (set/2026): pistas semeadas de taxonomias abertas SDSN/Elsevier/Aurora (D9) e caminho híbrido para ML (D10)
+
+> **Nota:** a nota de 0 a 100 é **relativa à densidade de pistas** do próprio currículo
+> (curva de saturação). Ela **não** compara dois pesquisadores entre si — para comparar,
+> analise cada currículo com a mesma régua e contraste os rankings.

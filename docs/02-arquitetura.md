@@ -29,9 +29,7 @@ flowchart TB
         S --> TAX["2 · SDGTaxonomy<br/>(os 17 ODS)"]
     end
 
-    Cliente -.-> "arquivo XML do Lattes" .-> P
-    T -.-> "chama" .-> DIR
-    TAX -.-> "define" .-> S
+    T -->|"aciona"| DIR
 ```
 
 > **Lembrete simples:** o servidor é o **trabalhador silencioso**. Ele só fala quando
@@ -91,7 +89,7 @@ flowchart LR
     P --> S
     T --> S
     S --> R
-    R -.-> "expõe ferramentas" .-> C
+    R -.->|"expõe ferramentas"| C
     C["Cliente MCP"]
 ```
 

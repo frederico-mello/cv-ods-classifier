@@ -136,7 +136,44 @@ vazar).
 
 ---
 
-## 9. O fio condutor
+## D9 · Taxonomias abertas como semente das pistas (v2)
+
+**O que mudou:** a v1 escrevia as palavras de cada ODS à mão. A pesquisa de estado da arte
+(set/2026) mostrou que isso já foi feito — e bem — por iniciativas internacionais.
+
+| Opção | Vantagem | Desvantagem |
+|-------|----------|-------------|
+| **Lista artesanal (v1)** | Controle total | Reinventa a roda; cobertura desigual; sem validação externa |
+| **Taxonomias abertas (escolhida)** | Listas já validadas (SDSN, Elsevier, Aurora); notas comparáveis com benchmarks internacionais | Precisa tradução e adaptação ao vocabulário do Lattes |
+
+**Decisão:** semear a SDGTaxonomy a partir das listas abertas, traduzir ao português,
+adaptar ao vocabulário do Lattes e anotar a **origem** de cada palavra. Ganho extra: as
+notas ficam **comparáveis** com as classificações dessas instituições.
+
+**Trade-off honesto:** tradução malfeita piora a precisão. Por isso a adaptação é um
+passo próprio, revisável por humano, fora do código.
+
+---
+
+## D10 · Híbrido: regras na base, ML opcional ao lado (v2)
+
+**Por que reabrir D2?** A pesquisa mostrou que existem classificadores de ML **abertos**
+(classificador da Aurora; componente de ML do dataset Elsevier 2023). Ignorá-los seria
+dogmatismo; usá-los como nota oficial quebraria o determinismo.
+
+| Opção | Vantagem | Desvantagem |
+|-------|----------|-------------|
+| **Só regras (v1)** | Determinístico, explicável | Perde contexto que o ML captura |
+| **Só ML** | Mais contexto semântico | Opaco, menos reproduzível |
+| **Híbrido (escolhida)** | Base determinística + ML opcional sinalizado | Duas respostas a manter |
+
+**Decisão:** a nota oficial continua vindo das regras. Um modo ML pode ser habilitado
+atrás de flag; quando ligado, o resultado é rotulado como "opinião de modelo", separado
+da nota oficial. IA generativa fica restrita a *explicar* resultados, nunca a *calculá-los*.
+
+---
+
+## 11. O fio condutor
 
 Todas as decisões seguem **três princípios**:
 
