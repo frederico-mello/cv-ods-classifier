@@ -6,102 +6,89 @@ Desenvimento Sustentável) da ONU**.
 
 ---
 
-## 1. A ideia, em uma frase
+## 📖 Pacote de Arquitetura (leia isto primeiro)
 
-Você aponta um currículo Lattes para o sistema, e ele responde: *"seu currículo contribui bastante
-para o ODS 4 (Educação de Qualidade) e para o ODS 13 (Ação Climática), moderadamente para o ODS 9
-(Inovação), e praticamente não menciona ODS 14 (Vida na Água)."*
+O **entregável de arquitetura** é um pacote de documentos em [`docs/`](docs/), no mesmo espírito
+de explicações para não‑TI. Abra o [`docs/README.md`](docs/README.md) para navegar.
+
+| Nº | Documento | Para quem é |
+|----|-----------|-------------|
+| 01 | [A ideia, sem TI](docs/01-conceito.md) | Qualquer pessoa |
+| 02 | [Arquitetura](docs/02-arquitetura.md) | Visão geral |
+| 03 | [Modelo de dados](docs/03-modelo-de-dados.md) | Os conceitos |
+| 04 | [Algoritmo](docs/04-algoritmo.md) | Como a nota é calculada |
+| 05 | [Interface](docs/05-interface.md) | Como usar as ferramentas |
+| 06 | [Runtime](docs/06-runtime.md) | Como rodar |
+| 07 | [Requisitos não-funcionais](docs/07-nf.md) | Qualidade |
+| 08 | [Decisões](docs/08-decisions.md) | Por que cada escolha |
+| 09 | [Glossário](docs/09-glossario.md) | Palavras técnicas |
+| 10 | [Estrutura do código](docs/10-estrutura.md) | Para quem vai codar |
 
 ---
 
-## 2. Por que isso existe
+## O que o sistema faz
 
-A ONU definiu 17 **Objetivos de Desenvimento Sustentável (ODS)** — um mapa global de prioridades para
-resolver problemas do mundo até 2030. Pesquisadores e instituições precisam mostrar, de forma
-comprensível, como o trabalho de uma pessoa se encaixa nesses objetivos. Esse servidor faz essa
-"ponte" automaticamente.
+Você aponta um currículo Lattes (arquivo XML oficial) para o sistema, e ele responde:
+
+> *"seu currículo contribui bastante para o ODS 13 (Ação Climática) e ODS 15 (Vida<br/>
+> Terrestre), moderadamente para ODS 4 (Educação) e ODS 9 (Inovação), e praticamente<br/>
+> não menciona ODS 14 (Vida na Água)."*
 
 ---
 
-## 3. Arquitetura do sistema
+## Arquitetura (resumo)
 
 O sistema é dividido em **quatro camadas**, cada uma com uma única responsabilidade:
 
 ```mermaid
 flowchart TB
-    subgraph Cliente["Cliente MCP (ex: Claude Desktop, o goose)"]
-        T["Ferramentas<br/>analyze_cv · get_sdg_report"]
+    subgraph MCP["Servidor MCP (lattes_sdg/)"]
+        DIR["Conexção (stdio)"]
+        DIR --> P["1 · LattesParser<br/>XML Lattes → campos"]
+        P --> S["3 · Scorer<br/>campos → nota 0–100"]
+        S --> R["4 · ReportBuilder<br/>nota → JSON"]
+        S --> TAX["2 · SDGTaxonomy<br/>17 ODS + pistas"]
     end
-
-    subgraph MCP["Servidor MCP (este projeto)"]
-        DIR["Discovery / Session<br/>Standard Streams (stdio)"]
-        T <--> DIR
-        DIR -->|JSON-RPC 2.0| PARSER["1. LattesParser<br/>XML Lattes → objetos Python"]
-        PARSER --> SCORE["3. Scorer<br/>Conteúdo → pontuação ODS"]
-        TAX["2. SDGTaxonomy<br/>17 ODS + keywords/temas"] --> SCORE
-        SCORE --> SERVER["4. ReportBuilder<br/>JSON estruturado (server.py)"]
-    end
-
-    CLIENTE -.->|Arquivo .xml do Lattes| PARSER
-    TAX -.->|Definição dos 17 ODS| SCORE
+    CLIENTE -.-> "arquivo .xml" .-> P
 ```
 
-### As camadas
+| # | Camada | Arquivo | Função |
+|---|--------|---------|--------|
+| 1 | LattesParser | `lattes_sdg/parser.py` | XML Lattes → campos categorizados |
+| 2 | SDGTaxonomy | `lattes_sdg/sds.py` | Define os 17 ODS e as pistas |
+| 3 | Scorer | `lattes_sdg/scorer.py` | Calcula a nota de 0 a 100 |
+| 4 | ReportBuilder | `lattes_sdg/server.py` | Expõe as ferramentas MCP |
 
-| # | Módulo | O que faz | Por que separar |
-|---|--------|-----------|-----------------|
-| 1 | `LattesParser` | Transforma o XML cru do Lattes em objetos Python organizados (formação, publicações, projetos…) | O XML do Lattes é enorme e bagunçado. Isolar isso evita que o resto do código dependa da estrutura XML |
-| 2 | `SDGTaxonomy` | Define os 17 ODS, com nome, descrição e um conjunto de "pistas" (keywords + temas) para reconhecer cada um | Os ODS são o "dicionário" do sistema. Ter uma fonte única evita duplicação e facilita correção |
-| 3 | `Scorer` | Pega o conteúdo estruturado e, usando as pistas, calcula uma pontuação 0–100 para cada ODS | É o "motor" de análise. Fica isolado para poder ser testado e ajustado sem tocar no resto |
-| 4 | `ReportBuilder` | Monta a resposta final (JSON) com scores, rankings e justificativas | Separa a "lógica de negócio" da "forma de saída" |
-
----
-
-## 4. Como funciona a classificação (o "motor")
-
-O `Scorer` não "adivinha". Ele segue um processo explícito e transparente:
-
-1. **Extração de pistas**: para cada trecho do currículo (títulos de disciplinas,
-   nomes de cursos, títulos de artigos, áreas de pesquisa, projetos, extensão…), ele
-   busca as **pistas** que a `SDGTaxonomy` conhece para cada ODS (ex.: "clima", "CO₂",
-   "aquecimento global" → ODS 13).
-
-2. **Pesagem por relevância**: nem todo trecho vale igual. Uma **publicação científica**
-   sobre o tema vale mais que uma menção solta. O sistema pondera cada pista pelo peso da
-   seção do Lattes.
-
-3. **Consistência semântica**: se o mesmo tema aparece várias vezes, a contribuição para
-   aquele ODS cresce (mas com retorno decrescente, para não inflar scores).
-
-4. **Normalização**: a soma bruta é convertida em uma nota de **0 a 100** por ODS.
-
-5. **Justificativa**: para cada ODS, o sistema mostra *quais* pistas encontradas e *de onde*
-   vieram, para que o resultado seja explicável (não uma "caixa preta").
-
-> O método é de **correspondência dirigida por conhecimento** (keywords + pesos), não de
-> IA generativa. Isso torna o resultado determinístico, reproduzível e auditável — ideal para
-> análise de currículo acadêmico.
+**Método:** correspondência dirigida por conhecimento (palavras‑chave + pesos), **não IA
+generativa** → resultado determinístico, reproduzível e auditável.
 
 ---
 
-## 5. Como usar
+## Ferramentas expostas
 
-### 5.1 Rodar o servidor MCP
+| Ferramenta | O que faz |
+|------------|-----------|
+| `analyze_cv` | Analisa um currículo e nota os 17 ODS + ranking + top 5 |
+| `get_sdg_report` | Relatório estruturado com scores, ODS top e pistas |
+
+Entrada aceita: **XML colado** ou **caminho de arquivo** (`.xml`).
+
+---
+
+## Como rodar
 
 ```bash
-python -m lattes_sdg.server
+python -m lattes_sdg.server   # inicia o servidor MCP (stdio)
+python demo.py                # roda a análise no exemplo_cv.xml
+python tests/test_classifier.py  # roda os testes
 ```
 
-Isso inicia o servidor MCP sobre o canal **stdio** (o padrão para clientes locais).
-
-### 5.2 Conectar um cliente
-
-Exemplo de configuração para um cliente MCP (`.json` de configuração):
+Configuração de um cliente MCP:
 
 ```json
 {
   "mcpServers": {
-    "lattes-ods": {
+    "lattes-sdg": {
       "command": "python",
       "args": ["-m", "lattes_sdg.server"]
     }
@@ -109,40 +96,29 @@ Exemplo de configuração para um cliente MCP (`.json` de configuração):
 }
 ```
 
-### 5.3 Ferramentas expostas
-
-O servidor oferece **duas ferramentas** para o cliente usar:
-
-| Ferramenta | Argumento | O que retorna |
-|------------|-----------|---------------|
-| `analyze_cv` | `lattes_xml` (conteúdo do arquivo) ou `file_path` | Score de todos os 17 ODS, ranking e justificativas |
-| `get_sdg_report` | mesmo `analyze_cv` | Relatório estruturado com scores, top ODS e detalhes por seção |
-
 ---
 
-## 6. Estrutura do projeto
+## Estrutura do projeto
 
 ```
 cv-ods-classifier/
-├── README.md            # este arquivo
-├── requirements.txt     # dependências (mcp já vem instalado)
-├── lattes_sdg/
-│   ├── __init__.py
-│   ├── parser.py        # 1. LattesParser: XML Lattes → objetos Python
-│   ├── sds.py           # 2. SDGTaxonomy: os 17 ODS + pistas
-│   ├── scorer.py        # 3. Scorer: conteúdo → pontuação ODS
-│   └── server.py        # 4. Servidor MCP + ReportBuilder
-└── tests/
-    └── test_classifier.py
+├── docs/                    # Pacote de arquitetura (leia isto)
+├── lattes_sdg/              # Implementação (rascunho de referência)
+│   ├── parser.py            #   camada 1
+│   ├── sds.py               #   camada 2
+│   ├── scorer.py            #   camada 3
+│   └── server.py            #   camada 4
+├── tests/
+│   └── test_classifier.py   #   9 testes
+├── demo.py                  # roda sem cliente
+├── exemplo_cv.xml           #   currículo de exemplo
+└── requirements.txt
 ```
 
 ---
 
-## 7. Notas de design e extensibilidade
+## Status
 
-- **Adicionar um ODS novo** ou ajustar um existente: altere só o `sds.py` (lista de pistas).
-  O resto do código não muda.
-- **Ajustar pesos**: os pesos por seção vivem no `Scorer`. Ajuste `SECTION_WEIGHTS`.
-- **Mudar a saída**: edite só o `ReportBuilder`. A lógica de pontuação não é tocada.
-- **Testabilidade**: o `Scorer` e o `parser` são funções/puras, testáveis sem o servidor MCP.
-```
+- ✅ Implementação funcionando
+- ✅ 9/9 testes passando
+- ✅ Pacote de arquitetura completo em `docs/`
