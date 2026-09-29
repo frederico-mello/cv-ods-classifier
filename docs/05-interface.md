@@ -101,7 +101,8 @@ E o servidor devolve algo assim (resumido):
   "scores": [
     { "sdg_id": 13, "title": "Ação Climática", "score": 64.2,
       "matched_keywords": ["clima"], "evidence": [
-        { "keyword": "clima", "section": "linhaPesquisa", "text": "Mudanças Climáticas..." }
+        { "keyword": "clima", "section": "linhaPesquisa", "text": "Mudanças Climáticas...",
+          "tag_origem": "LINHA-DE-PESQUISA" }
       ]
     }
   ],

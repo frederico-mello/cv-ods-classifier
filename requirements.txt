@@ -1,6 +1,7 @@
 # Dependências do Classificador de Currículo Lattes por ODS
-# O SDK do MCP já está instalado no ambiente.
-mcp>=1.27.0
+# SDK MCP compatível com o servidor (mcp.server.Server, mcp.server.stdio e
+# mcp.types.TextContent/Tool/EmptyResult/Prompt): linha 1.x, sem pular para 2.x.
+mcp>=1.27.0,<2.0.0
 
 # (opcional) para rodar os testes com pytest:
 # pytest>=8.0.0

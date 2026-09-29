@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testes
+.pytest_cache/
+
+# Currículos pessoais (nunca versionar)
+cv-frederico.xml

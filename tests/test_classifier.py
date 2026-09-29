@@ -1,6 +1,11 @@
 """
 Testes do Classificador de Currículo Lattes por ODS.
 
+Continuidade (critério A7 da Onda M0): os nove testes abaixo rodam contra
+`tests/fixtures/cv_sintetico_formato_real.xml` — o antigo exemplo do projeto
+reescrito no formato oficial do Lattes (tags MAIÚSCULAS com atributos). A
+cobertura é a mesma da suíte original; só mudou a régua de entrada.
+
 Rode com:
     python -m pytest tests/ -v
 ou, sem pytest:
@@ -14,45 +19,21 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lattes_sdg.parser import parse_lattes_xml
+from lattes_sdg.parser import parse_lattes_file, parse_lattes_xml
 from lattes_sdg.sds import build_taxonomy
 from lattes_sdg.scorer import Scorer
 
-
-SAMPLE = b"""<?xml version="1.0" encoding="UTF-8"?>
-<lattes>
-  <tituloPrincipal>Dr. Teste</tituloPrincipal>
-  <areaConcentracao>CIENCIAS BIOLOGICAS</areaConcentracao>
-  <formacao>
-    <nivelFormacao>DOUTORADO</nivelFormacao>
-    <tituloRealizado>Doutorado em Ciencias Biologicas</tituloRealizado>
-  </formacao>
-  <linhaPesquisa>
-    <nomeDaLinhaPesquisa>Mudancas Climaticas e Ecossistemas</nomeDaLinhaPesquisa>
-  </linhaPesquisa>
-  <publicacao>
-    <tipo>ARTIGO_PUBLICADO</tipo>
-    <tituloDoTrabalho>Aquecimento Global e Biodiversidade Florestal</tituloDoTrabalho>
-    <nomeDoPeriodico>Revista de Ecologia</nomeDoPeriodico>
-  </publicacao>
-  <publicacao>
-    <tipo>ARTIGO_PUBLICADO</tipo>
-    <tituloDoTrabalho>Tratamento de Doencas Cronicas</tituloDoTrabalho>
-    <nomeDaRevista>Journal of Health</nomeDaRevista>
-  </publicacao>
-  <resumo>
-    <resumodoCurriculo>Ecologia, educacao e mudancas climaticas</resumodoCurriculo>
-  </resumo>
-  <palavrasChave>
-    <palavraChave>mudancas climaticas</palavraChave>
-    <palavraChave>biodiversidade</palavraChave>
-  </palavrasChave>
-</lattes>
-"""
+# Fixture em formato oficial usado por toda a suíte de continuidade
+# (docs/12-plano-onda-m0.md §5 e §6, critério A7).
+FIXTURE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "fixtures",
+    "cv_sintetico_formato_real.xml",
+)
 
 
 def _analyze():
-    doc = parse_lattes_xml(SAMPLE)
+    doc = parse_lattes_file(FIXTURE)
     return Scorer(build_taxonomy()).analyze(doc)
 
 

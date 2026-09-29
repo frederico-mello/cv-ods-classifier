@@ -3,12 +3,15 @@ SDGTaxonomy: os 17 Objetivos de Desenvimento Sustentável da ONU e as pistas
 que permitem reconhecê-los num Currículo Lattes.
 
 Cada ODS é representado por:
-  - id          : número de 1 a 17
+  - id            : número de 1 a 17
   - title         : nome curto (oficial da ONU)
   - description   : o que o ODS significa
   - keywords      : palavras-chave em pt/en que sinalizam o tema
   - themes        : termos mais amplos / sinônimos conceituais
-  - weight        : peso base (0..1) para pistas dessa seção
+  - excecoes      : pistas curtas autorizadas a pontuar (ex.: CO2)
+
+A busca obedece ao funil único do D5: mesma `normalizar()` nos dois lados,
+fronteira de palavra na comparação e ban-list para pista curta não autorizada.
 
 Fonte: https://sdgs.un.org/sustainable-development-goals
 
@@ -18,33 +21,115 @@ comportamento do sistema inteiro, mas nada mais depende da estrutura interna.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Set, Tuple
+
+# Pistas com menos letras que isto, após normalização, não pontuam por padrão.
+MINIMO_LETRAS = 4
+
+# Fronteira de palavra: limites não alfanuméricos (letras e dígitos dividem a
+# palavra; qualquer outro caractere, inclusive hífen, marca fronteira).
+_FRONTEIRA_ESQ = r"(?<![0-9A-Za-z])"
+_FRONTEIRA_DIR = r"(?![0-9A-Za-z])"
+
+# Pista preparada: (forma normalizada, forma original em minúsculas, regex).
+Pista = Tuple[str, str, re.Pattern[str]]
+
+
+def normalizar(text: str) -> str:
+    """Normalização ÚNICA aplicada igualmente ao texto e às pistas.
+
+    Minúsculas + remoção de acentos (NFD descartando marcas combinantes) +
+    colapso de espaços. Só o resultado desta função é comparado, dos dois
+    lados — é o que faz "climática" e "climatica" serem a mesma pista.
+    """
+    if not text:
+        return ""
+    sem_acento = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFD", text.lower())
+        if unicodedata.category(caractere) != "Mn"
+    )
+    return re.sub(r"\s+", " ", sem_acento).strip()
+
+
+def _qtde_letras(normalizada: str) -> int:
+    return sum(1 for caractere in normalizada if caractere.isalpha())
+
+
+def _compilar(pista: str) -> re.Pattern[str]:
+    """Regex da pista que só casa cercada de fronteiras de palavra."""
+    return re.compile(_FRONTEIRA_ESQ + re.escape(pista) + _FRONTEIRA_DIR)
+
+
+def _preparar(pistas: Iterable[str], excecoes: Set[str]) -> List[Pista]:
+    """Pré-normaliza, aplica a ban-list e compila as pistas uma única vez.
+
+    Mantém a ordem da taxonomia e descarta normalizados repetidos (a primeira
+    declaração vence). Pistas curtas só passam se estiverem em `excecoes`.
+    """
+    preparadas: List[Pista] = []
+    vistas: Set[str] = set()
+    for pista in pistas:
+        normalizada = normalizar(pista)
+        if not normalizada or normalizada in vistas:
+            continue
+        if _qtde_letras(normalizada) < MINIMO_LETRAS and normalizada not in excecoes:
+            continue
+        vistas.add(normalizada)
+        preparadas.append((normalizada, pista.lower(), _compilar(normalizada)))
+    return preparadas
 
 
 @dataclass(frozen=True)
 class SDG:
-    """Um dos 17 Objetivos de Desenvimento Sustentável."""
+    """Um dos 17 Objetivos de Desenvolvimento Sustentável."""
 
     id: int
     title: str
     description: str
     keywords: List[str] = field(default_factory=list)
     themes: List[str] = field(default_factory=list)
+    excecoes: List[str] = field(default_factory=list)
+    _pistas_keywords: List[Pista] = field(
+        default_factory=list, init=False, repr=False, compare=False
+    )
+    _pistas_themes: List[Pista] = field(
+        default_factory=list, init=False, repr=False, compare=False
+    )
+
+    def __post_init__(self) -> None:
+        excecoes = {normalizar(excecao) for excecao in self.excecoes}
+        object.__setattr__(self, "_pistas_keywords", _preparar(self.keywords, excecoes))
+        object.__setattr__(self, "_pistas_themes", _preparar(self.themes, excecoes))
+
+    @staticmethod
+    def _buscar(text: str, pistas: List[Pista]) -> List[str]:
+        normalizado = normalizar(text)
+        if not normalizado:
+            return []
+        return [
+            original
+            for _, original, regex in pistas
+            if regex.search(normalizado)
+        ]
 
     def matches(self, text: str) -> List[str]:
-        """Retorna as pistas encontradas em `text` (case-insensitive)."""
-        if not text:
-            return []
-        t = text.lower()
-        found: List[str] = []
-        for kw in self.keywords:
-            if kw.lower() in t:
-                found.append(kw.lower())
-        for th in self.themes:
-            if th.lower() in t:
-                found.append(th.lower())
-        return found
+        """Retorna as pistas (keywords + temas) que casam em `text`.
+
+        A comparação usa a normalização única e exige fronteira de palavra:
+        a pista só entra como palavra inteira ou expressão, nunca como
+        substring de palavra maior.
+        """
+        return self._buscar(text, self._pistas_keywords) + self._buscar(
+            text, self._pistas_themes
+        )
+
+    def matches_temas(self, text: str) -> List[str]:
+        """Busca ampla por temas, com a mesma normalização e fronteira."""
+        return self._buscar(text, self._pistas_themes)
 
 
 @dataclass
@@ -60,7 +145,7 @@ class SDGTaxonomy:
         self._themes = {}
         for s in self.sdgs:
             for th in s.themes:
-                self._themes[th.lower()] = s.id
+                self._themes[normalizar(th)] = s.id
 
     def get(self, sdg_id: int) -> SDG:
         return self._by_id[sdg_id]
@@ -209,6 +294,7 @@ def build_taxonomy() -> SDGTaxonomy:
                       "emissões", "emissoes", "mitigação climática", "mitigacao climatica",
                       "resiliência climática", "climate change", "climate action"],
             themes=["clima", "mudanças climáticas", "carbono", "mitigação climática"],
+            excecoes=["CO2"],
         ),
         SDG(
             id=14, title="Vida na Água",

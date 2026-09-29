@@ -28,6 +28,33 @@ flowchart TB
 > **Analogia:** é como passar um ímã em cima de um monte de areia. As pistas são os
 > preguinhos que o ímã (o ODS) consegue puxar. Quanto mais preguinhos, maior a nota.
 
+### O funil: quando duas strings são a mesma palavra
+
+Antes de comparar, texto e pista passam pelo **mesmo funil** — é ele que decide o que
+conta como palavra:
+
+```mermaid
+flowchart LR
+    A["texto do campo<br/>+ pista do ODS"] --> B["1. Normaliza<br/>minúsculas, sem acento"]
+    B --> C["2. Compara com<br/>fronteira de palavra"]
+    C --> D{"pista tem<br/>menos de 4 letras?"}
+    D -->|"sim, sem exceção<br/>(ban-list)"| Z["não pontua"]
+    D -->|"não, ou é exceção<br/>(ex.: CO2)"| P["pista válida"]
+```
+
+1. **Normalização única** — minúsculas, sem acento, espaços colapsados, aplicada dos
+   dois lados: `climática` e `climatica` viram a mesma coisa.
+2. **Fronteira de palavra** — a pista só casa cercada de limites de palavra: `ia` não
+   casa em "Ciências" (o pedaço está no meio da palavra) e `mar` não casa em "Maria".
+   Hífen conta como fronteira (`pesquisa-e-desenvolvimento` é dividido em palavras).
+3. **Ban-list com exceções** — pista com menos de 4 letras não pontua por padrão; a
+   taxonomia autoriza pontualmente (ex.: `CO2`).
+
+> **Por que isso importa?** Antes, a comparação era por substring: a nota era movida por
+> **nomes** ("Maria" pontuava o ODS 14 pela pista "mar"). Com o funil, só o conteúdo
+> acadêmico pontua — e dados pessoais nem chegam ao algoritmo, porque o parser os
+> descarta antes (ver [03 — Modelo de Dados](03-modelo-de-dados.md)).
+
 ---
 
 ## 2. Os quatro passos da nota
@@ -70,6 +97,11 @@ nota = 100 × (1 − e^(−soma ÷ K))
 
 onde **K** é um número que controla a "velocidade" da curva (no rascunho, K = 2,3 — valor recalibrado na v2; ver o exemplo da seção 4).
 
+> **Os números exatos vivem no código:** decaimento (`DECAY`), constante `K`
+> (`SATURATION_K`) e pesos de seção (`SECTION_WEIGHTS`) estão em
+> `lattes_sdg/scorer.py`. A reconciliação deste documento com esses valores é da
+> Onda M1 — a Onda M0 mudou a leitura e a busca, não o cálculo.
+
 ```mermaid
 xyChart
     title "Soma bruta → Nota (0 a 100)"
@@ -87,29 +119,47 @@ xyChart
 O sistema lista as **pistas** que formaram a nota (limitado a 6 por ODS). Assim, a nota
 nunca é um número misterioso — ela sempre tem **evidências** que a justificam.
 
+A lista é deduplicada antes de sair:
+
+| Regra | Efeito |
+|-------|--------|
+| **1 evidência por campo por ODS** | várias palavras do mesmo ODS no mesmo campo viram **uma** evidência agrupada (`keyword`), não três |
+| **campos distintos → evidências distintas** | rastreabilidade preservada; nenhuma combinação campo/ODS aparece duas vezes |
+| **máx. 6 evidências por ODS** | o resto é cortado — a nota continua contando tudo, só a explicação encurta |
+| **fallback máx. 1 evidência por ODS** | a busca ampla entra como uma evidência só, na seção `busca_ampla` |
+
+Cada evidência carrega `section`, `tag_origem` (a tag do XML de onde o campo veio) e
+`text` (o trecho citado, truncado em 120 caracteres) — dá para voltar do resultado até a
+origem no arquivo.
+
 ---
 
 ## 3. O que conta como "pista"
 
-Um ODS tem **duas formas** de achar pistas:
+O ODS tem **duas rodadas** de busca — e a segunda só existe se a primeira falhar:
 
-| Tipo | Como funciona | Quando |
-|------|---------------|--------|
-| **Palavras‑chave** | Busca direta de palavras (ex.: "metano") | Sempre |
-| **Temas** | Busca ampla por sinônimo (ex.: "clima") | Só se nenhuma palavra‑chave bater |
+| Rodada | Como funciona | Quando |
+|--------|---------------|--------|
+| **Varredura principal** | para cada campo, procura palavras‑chave **e** temas com o funil (normalização + fronteira + ban‑list) | sempre |
+| **Fallback por temas** | uma única passagem por **todo o texto** do currículo, por ODS | **só** se a varredura principal não achou nada; emite **no máximo 1 evidência** |
 
 ```mermaid
 flowchart TB
-    C["Campo do currículo"] --> P{"Busca<br/>palavras-chave?"}
-    P -->|achou| E["Pista de palavra"]
-    P -->|não achou| T{"Busca<br/>por tema?"}
-    T -->|achou| E2["Pista de tema (busca ampla)"]
-    T -->|não achou| Z["Sem pista para este ODS"]
+    A["Varredura principal<br/>(campo a campo)"] --> B{"alguma pista<br/>casou neste ODS?"}
+    B -->|sim| C["conta com peso e decaimento<br/>1 evidência por campo"]
+    B -->|não| D["Fallback por temas<br/>1 vez por ODS"]
+    D --> E{"tema casou no<br/>texto inteiro?"}
+    E -->|sim| F["pista de tema<br/>(máx. 1 evidência)"]
+    E -->|não| Z["ODS fica zerado"]
 ```
 
-> **Por que duas formas?** As palavras‑chave são precisas; os temas são amplos. Um ODS
-> pode não ter a palavra exata, mas ter o **conceito**. A busca ampla captura isso sem
-> confundir com a busca direta.
+> **Por que duas rodadas?** As palavras‑chave são precisas; os temas são amplos e podem
+> se partir entre campos (uma expressão começa em um campo e termina em outro). O fallback
+> cobre esse caso **uma vez só** — sem inflar a lista de evidências nem rodar por campo.
+
+> **Só conteúdo pontua:** a busca vê o texto dos campos; CPF, e‑mail, telefone e nomes
+> nunca chegam aqui, porque o parser os descarta antes (requisito 5 do
+> [07 — Não Funcionais](07-nf.md)).
 
 ---
 
@@ -150,14 +200,48 @@ Aplicando a curva: `100 × (1 − e^(−2,35/1,4))` ≈ **64** (nota)
 
 ---
 
-## 6. Resumo
+## 6. Do XML decodificado à serialização
+
+O algoritmo não começa no "caçar pistas": antes dele, o arquivo precisa virar campo.
+Este é o percurso completo, do arquivo ao JSON:
+
+```mermaid
+flowchart LR
+    X["arquivo .xml<br/>(bytes)"] --> D["1 · Decodifica<br/>ISO-8859-1<br/>(fallback UTF-8)"]
+    D --> P["2 · Varre tags<br/>e atributos"]
+    P --> F["3 · Filtro PII<br/>+ tabela de<br/>mapeamento"]
+    F --> L["LattesDocument<br/>(campos)"]
+    L --> S["4 · Busca na<br/>taxonomia<br/>(funil)"]
+    S --> C["5 · Pesa + decai<br/>+ satura"]
+    C --> A["CVAnalysis<br/>(17 notas)"]
+    A --> J["6a · JSON<br/>(servidor MCP)"]
+    A --> M["6b · texto<br/>(demo.py)"]
+```
+
+| Etapa | Módulo | Entrada | Saída |
+|-------|--------|---------|-------|
+| 1 · Decodificação | `parser.py` | bytes do arquivo | texto (`str`) |
+| 2 · Varredura | `parser.py` | árvore de elementos | atributos por tag |
+| 3 · Mapeamento + filtro | `parser.py` | atributos | `Field{secao, texto, peso, tag_origem}` |
+| 4 · Busca | `sds.py` + `scorer.py` | campos × pistas | correspondências por ODS |
+| 5 · Nota | `scorer.py` | pesos das ocorrências | `SDGScore{score, evidence}` |
+| 6 · Serialização | `server.py` / `demo.py` | `CVAnalysis` | JSON (UTF‑8, `ensure_ascii=False`) ou texto impresso |
+
+> **Contrato preservado:** a porta de entrada continua `parse_lattes_xml(bytes) →
+> LattesDocument`. Scorer e servidor não sabem que o leitor por baixo mudou — e a saída é
+> determinística: mesma entrada, mesmo JSON byte a byte (critério A6).
+
+---
+
+## 7. Resumo
 
 O algoritmo é uma linha de montagem:
 
-1. **Cace pistas** (palavras‑chave e temas)
-2. **Pese** cada pista pelo peso da seção
-3. **Some** com decaimento (repetição vale menos)
-4. **Sature** numa curva de 0 a 100
-5. **Explique** listando as pistas
+1. **Decodifica e converte** o XML oficial em campos (sem dados pessoais)
+2. **Cace pistas** (palavras‑chave sempre; temas em fallback, uma vez por ODS)
+3. **Pese** cada pista pelo peso da seção
+4. **Some** com decaimento (repetição vale menos)
+5. **Sature** numa curva de 0 a 100
+6. **Explique** listando as pistas — uma por campo, com seção, `tag_origem` e trecho
 
 Mesma entrada → mesma saída, sempre. E cada nota vem com suas pistas — nenhuma é mágica.

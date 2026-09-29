@@ -99,24 +99,26 @@ Se você só quer **ver o sistema funcionando** (sem precisar de um cliente de I
 
 ```bash
 python demo.py
+python demo.py caminho/para/curriculo.xml
 ```
 
-Ele pega o `exemplo_cv.xml` (um currículo de exemplo que vem no projeto) e imprime a
-nota de cada ODS, das pistas e do ranking. É a forma mais rápida de ver o sistema em
-ação.
+Sem argumento ele usa o XML da raiz do projeto (não versionado); com argumento, roda em
+qualquer currículo — inclusive nos fixtures de `tests/fixtures/`. A saída traz a fonte, os
+campos, as seções, o ranking dos ODS com nota acima de zero e uma evidência por ODS. É a
+forma mais rápida de ver o sistema em ação.
 
 ```mermaid
 flowchart LR
-    D["python demo.py"] --> X["exemplo_cv.xml"]
+    D["python demo.py [arquivo.xml]"] --> X["XML do Lattes"]
     X --> P["LattesParser"]
     P --> S["Scorer"]
-    S --> R["imprime a nota de cada ODS"]
+    S --> R["imprime ranking + evidências"]
 ```
 
 E os **testes automáticos** garantem que nada quebra:
 
 ```bash
-python tests/test_classifier.py
+python -m pytest -q
 ```
 
 ---
@@ -141,5 +143,5 @@ dentro do Python, fala por `stdio` e só precisa de um cliente para ser usado. P
 resultado sem cliente, use `demo.py`.
 
 - **Rodar:** `python -m lattes_sdg.server`
-- **Ver funcionando:** `python demo.py`
-- **Testar:** `python tests/test_classifier.py`
+- **Ver funcionando:** `python demo.py [arquivo.xml]`
+- **Testar:** `python -m pytest -q`

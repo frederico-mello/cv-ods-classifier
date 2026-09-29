@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-09-28
+goal: "Fazer o classificador ler o XML oficial do Lattes (dados em atributos,
+  tags MAIUSCULAS com hifen, ISO-8859-1) e eliminar os falsos positivos que
+  pontuam o nome do pesquisador: parser novo com tabela de mapeamento e filtro
+  de PII, busca com fronteira de palavra + normalizacao + ban-list, dedupe de
+  evidencias, fixtures reais anonimizadas e os 8 criterios de aceite A1-A8 do
+  plano docs/12-plano-onda-m0.md."

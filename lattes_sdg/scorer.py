@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from .parser import LattesDocument
 from .sds import SDG, SDGTaxonomy, build_taxonomy
@@ -32,6 +32,7 @@ SECTION_WEIGHTS: Dict[str, float] = {
     "projeto_descricao": 0.9,
     "projeto_titulo": 0.8,
     "resumo": 0.8,
+    "atuacao": 0.7,
     "palavra_chave": 0.7,
     "descricao_curriculo": 0.7,
     "objetivo": 0.6,
@@ -63,6 +64,23 @@ DECAY = 0.55
 # Constante de saturação da curva: controla quão rápido um ODS se aproxima de 100.
 # Valores maiores exigem mais pistas para chegar alto.
 SATURATION_K = 1.4
+
+# Seção usada pela busca ampla (fallback por temas).
+SECAO_BUSCA_AMPLA = "busca_ampla"
+
+
+def _sem_repetidos(itens: Iterable[str]) -> List[str]:
+    """Remove repetidos preservando a ordem de entrada (nada de set na saída).
+
+    A ordem de iteração de um `set` de strings varia com `PYTHONHASHSEED`
+    entre processos; listas/dicts preservam a ordem de inserção e garantem
+    a serialização idêntica byte a byte entre execuções (A6).
+    """
+    unicos: List[str] = []
+    for item in itens:
+        if item not in unicos:
+            unicos.append(item)
+    return unicos
 
 
 @dataclass
@@ -136,34 +154,43 @@ class Scorer:
             evidence: List[Dict[str, str]] = []
             matched: List[str] = []
 
+            # Varredura principal: no máximo UMA evidência por (campo, ODS).
+            # Várias palavras-chave do mesmo ODS no mesmo campo são agrupadas
+            # na própria evidência, mantendo seção e tag_origem do campo —
+            # campos distintos seguem gerando evidências distintas (A5).
             for field_obj in fields:
-                weight = SECTION_WEIGHTS.get(field_obj.section, 0.3)
                 found = sdg.matches(field_obj.text)
-                if found:
-                    counts.append(weight)
-                    for kw in found:
-                        if kw not in matched:
-                            matched.append(kw)
-                        if len(evidence) < MAX_EVIDENCE_PER_SDG:
-                            evidence.append({
-                                "keyword": kw,
-                                "section": field_obj.section,
-                                "text": field_obj.text[:120],
-                            })
+                if not found:
+                    continue
+                counts.append(SECTION_WEIGHTS.get(field_obj.section, 0.3))
+                palavras = _sem_repetidos(found)
+                for kw in palavras:
+                    if kw not in matched:
+                        matched.append(kw)
+                if len(evidence) < MAX_EVIDENCE_PER_SDG:
+                    evidence.append({
+                        "keyword": ", ".join(palavras),
+                        "section": field_obj.section,
+                        "text": field_obj.text[:120],
+                        "tag_origem": field_obj.tag_origem,
+                    })
 
-            # Se nenhuma pista direta, tenta busca por temas amplos.
+            # Fallback por temas: SOMENTE depois da varredura principal e só
+            # para ODS sem nenhuma correspondência (`counts` vazio), rodando
+            # uma única vez por ODS e emitindo no máximo uma evidência.
             if not counts:
-                text = doc.as_text().lower()
-                for th in sdg.themes:
-                    if th.lower() in text:
-                        counts.append(1.0)
-                        if th.lower() not in matched:
-                            matched.append(th.lower())
-                        evidence.append({
-                            "keyword": th,
-                            "section": "busca_ampla",
-                            "text": "",
-                        })
+                temas = _sem_repetidos(sdg.matches_temas(doc.as_text()))
+                for tema in temas:
+                    counts.append(1.0)
+                    if tema not in matched:
+                        matched.append(tema)
+                if temas:
+                    evidence.append({
+                        "keyword": ", ".join(temas),
+                        "section": SECAO_BUSCA_AMPLA,
+                        "text": "",
+                        "tag_origem": "",
+                    })
 
             raw = self._raw_score(counts)
             score = self._normalize(raw)
