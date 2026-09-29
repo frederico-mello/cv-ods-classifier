@@ -69,20 +69,35 @@ flowchart LR
 ```
 
 ### Passo 1 — Pesar
-Cada pista ganha o **peso da seção** onde apareceu. Uma publicação sobre clima vale mais
-que uma menção solta:
+Cada pista ganha o **peso da seção** onde apareceu, lido de `SECTION_WEIGHTS` (as 24
+chaves estão na [03 — Modelo de Dados](03-modelo-de-dados.md)). Uma publicação sobre
+clima vale mais que uma menção solta:
 
-| Onde a pista apareceu | Peso |
-|-----------------------|------|
-| Linha de pesquisa / título de publicação | 1.0 |
-| Título de projeto | 0.8 |
-| Resumo / descrição | 0.7 |
-| Formação | 0.4 |
-| Menção genérica | 0.3 |
+| Onde a pista apareceu | Chave (`SECTION_WEIGHTS`) | Peso |
+|-----------------------|---------------------------|------|
+| Linha de pesquisa / título de publicação | `linhaPesquisa`, `pub_titulo`, `pub_trabalho`, `pub_obra` | 1.0 |
+| Título de projeto / resumo | `projeto_titulo`, `resumo` | 0.8 |
+| Palavra-chave / descrição do currículo | `palavra_chave`, `descricao_curriculo` | 0.7 |
+| Objetivo / sinopse | `objetivo`, `sinopse` | 0.6 |
+| Formação (assunto, título) / tipo de publicação | `formacao_assunto`, `formacao_titulo`, `pub_tipo` | 0.4 |
+| Menção genérica (e seção fora do mapa) | `titulo`, `pub_revista`, `pub_periodico` | 0.3 |
+| Ano de formação | `formacao_ano` | 0.1 |
+
+> Subconjunto ilustrativo (todas as 24 chaves estão no
+> [03 — Modelo de Dados](03-modelo-de-dados.md)); cada linha confere com
+> `SECTION_WEIGHTS` em `lattes_sdg/scorer.py`. Chave fora do mapa entra com o padrão
+> `0.3`.
 
 ### Passo 2 — Somar (com decaimento)
-Se a mesma pista aparece várias vezes, a **1ª** conta 100%, a **2ª** conta 70%, a **3ª**
-50% etc. Isso evita que um ODS ganhe nota alta só porque a palavra se repetiu.
+Se a mesma pista aparece várias vezes, a **1ª** conta 100%, a **2ª** conta 55% e a **3ª**
+conta 30,25% etc. Isso evita que um ODS ganhe nota alta só porque a palavra se repetiu.
+
+A progressão é **geométrica**: `_raw_score` soma cada ocorrência multiplicada por
+`DECAY ** i` (com `i` começando em 0 e `DECAY = 0.55`). Logo, os primeiros
+multiplicadores são **1** (`0.55⁰`), **0.55** (`0.55¹`) e **0.3025** (`0.55²`).
+
+> **Procedência:** o laço `total += c * (DECAY ** i)` dentro de `Scorer._raw_score`, em
+> `lattes_sdg/scorer.py`, com a constante `DECAY = 0.55` declarada na mesma fonte.
 
 > **Por que isso importa?** Um currículo que repete "clima" 50 vezes não deveria
 > automaticamente bater um que fala de clima 500 vezes. A soma "decai", ficando mais
@@ -95,25 +110,27 @@ A soma bruta é convertida em nota de 0 a 100 por uma **curva exponencial**:
 nota = 100 × (1 − e^(−soma ÷ K))
 ```
 
-onde **K** é um número que controla a "velocidade" da curva (no rascunho, K = 2,3 — valor recalibrado na v2; ver o exemplo da seção 4).
+onde **K** é `SATURATION_K = 1.4` (`lattes_sdg/scorer.py`) — a constante que controla a
+"velocidade" da curva: quanto maior, mais pistas para chegar perto de 100.
 
-> **Os números exatos vivem no código:** decaimento (`DECAY`), constante `K`
-> (`SATURATION_K`) e pesos de seção (`SECTION_WEIGHTS`) estão em
-> `lattes_sdg/scorer.py`. A reconciliação deste documento com esses valores é da
-> Onda M1 — a Onda M0 mudou a leitura e a busca, não o cálculo.
+> **Os números exatos vivem no código:** decaimento (`DECAY = 0.55`), constante `K`
+> (`SATURATION_K = 1.4`) e os 24 pesos de seção (`SECTION_WEIGHTS`) estão em
+> `lattes_sdg/scorer.py` — **o código é a fonte da verdade**. Este documento espelha
+> esses valores (reconciliados na Onda M1); a Onda M0 mudou a leitura e a busca, não o
+> cálculo.
 
 ```mermaid
 xyChart
-    title "Soma bruta → Nota (0 a 100)"
-    xaxis "Soma bruta" [0, 2, 4, 6, 8, 10]
+    title "Soma bruta → Nota (0 a 100), com SATURATION_K = 1.4"
+    xaxis "Soma bruta" [0, 1, 2, 3, 4, 5, 6]
     yaxis "Nota" [0, 25, 50, 75, 100]
-    line [0, 17, 33, 46, 56, 64]
-    line [0, 33, 51, 65, 75, 82]
+    line [0, 51, 76, 88.3, 94.3, 97.2, 98.6]
 ```
 
-> **Ler o gráfico:** notas sobem rápido no começo e desaceleram no fim. Isso significa
-> que **poucas pistas já dão uma nota razoável**, mas chegar perto de 100 exige
-> **muitas pistas** — e não vale a pena repetir palavras infinitamente.
+> **Ler o gráfico:** valores obtidos executando `_normalize` (comando da seção 4) para
+> cada soma bruta. Notas sobem rápido no começo e desaceleram no fim. Isso significa que
+> **poucas pistas já dão uma nota razoável**, mas chegar perto de 100 exige **muitas
+> pistas** — e não vale a pena repetir palavras infinitamente.
 
 ### Passo 4 — Explicar
 O sistema lista as **pistas** que formaram a nota (limitado a 6 por ODS). Assim, a nota
@@ -171,19 +188,66 @@ Considere um currículo com:
 - **Publicação:** *"Aquecimento Global e Biodiversidade Florestal"*
 - **Palavras‑chave:** *"mudanças climáticas"*
 
-Para o **ODS 13 (Ação Climática)**, o Scorer encontra:
+Para o **ODS 13 (Ação Climática)**, o `Scorer.analyze` devolve **uma evidência por
+campo** — três no total, cada uma com a palavra‑chave que casou naquele campo (a
+palavra `clima` não aparece em nenhum desses textos; quem casa é a expressão
+`mudanças climáticas` e o termo `aquecimento global`):
 
-| Pista | Seção | Peso |
-|-------|-------|------|
-| clima | linha de pesquisa | 1.0 |
-| clima | publicação | 1.0 |
-| clima | palavra‑chave | 0.7 |
+| Evidência (`keyword`) | Seção (`section`) | Peso (`SECTION_WEIGHTS`) |
+|-----------------------|-------------------|------|
+| `mudanças climáticas` | linha de pesquisa (`linhaPesquisa`) | 1.0 |
+| `aquecimento global` | publicação (`pub_titulo`) | 1.0 |
+| `mudanças climáticas` | palavra‑chave (`palavra_chave`) | 0.7 |
 
-Soma bruta ≈ 1,0 + 1,0×0,7 + 0,7×0,7² ≈ **2,35**
+Os três pesos viram a lista de ocorrências `counts = [1.0, 1.0, 0.7]`, na ordem em que
+os campos aparecem no currículo. O bruto e a nota abaixo **foram executados**, não
+calculados à mão — reproduza com (na raiz do repositório):
 
-Aplicando a curva: `100 × (1 − e^(−2,35/1,4))` ≈ **64** (nota)
+```bash
+python -c "from lattes_sdg.scorer import Scorer; s = Scorer(); counts = [1.0, 1.0, 0.7]; raw = s._raw_score(counts); print(repr(raw)); print(repr(s._normalize(raw)))"
+```
 
-> O resultado final mostra: *"ODS 13: 64 — pistas encontradas: clima (linha, publicação, palavra‑chave)"*.
+Saída:
+
+```
+1.7617500000000001
+71.6
+```
+
+Ou seja:
+
+| Etapa | Função | Resultado |
+|-------|--------|-----------|
+| Soma bruta (com `DECAY ** i` = 1, 0.55, 0.3025) | `_raw_score([1.0, 1.0, 0.7])` | `1.7617500000000001` |
+| Nota (curva com `SATURATION_K = 1.4`) | `_normalize(1.7617500000000001)` | `71.6` |
+
+> O bruto é uma soma de ponto flutuante (`1.0 + 1.0×0.55 + 0.7×0.3025`), por isso o
+> `...000001` no final — é o valor literal que o Python produz, sem arredondamento
+> manual. A nota, sim, é arredondada em uma casa (`round(..., 1)` em `_normalize`).
+
+As evidências acima também **foram executadas** — o `analyze` inteiro (nota +
+evidências) se reproduz com (na raiz do repositório):
+
+```bash
+python -c "from lattes_sdg.parser import Field, LattesDocument; from lattes_sdg.scorer import Scorer; doc = LattesDocument(fields=[Field(section='linhaPesquisa', text='Mudanças Climáticas e Ecossistemas', tag_origem='LINHA-DE-PESQUISA'), Field(section='pub_titulo', text='Aquecimento Global e Biodiversidade Florestal', tag_origem='DADOS-BASICOS-DO-ARTIGO'), Field(section='palavra_chave', text='mudanças climáticas', tag_origem='PALAVRA-CHAVE-1')]); s13 = Scorer().analyze(doc).get(13); print(repr(s13.score)); [print(e['keyword'], '|', e['section'], '|', e['tag_origem']) for e in s13.evidence]"
+```
+
+Saída:
+
+```
+71.6
+mudanças climáticas | linhaPesquisa | LINHA-DE-PESQUISA
+aquecimento global | pub_titulo | DADOS-BASICOS-DO-ARTIGO
+mudanças climáticas | palavra_chave | PALAVRA-CHAVE-1
+```
+
+> As três evidências são distintas porque os **campos** são distintos — é a regra "1
+> evidência por campo por ODS" (Passo 4). `matched_keywords`, que não repete palavra,
+> fica com `['mudanças climáticas', 'aquecimento global']`.
+
+> O resultado final mostra: *"ODS 13: 71.6 — evidências: `mudanças climáticas`
+> (linhaPesquisa), `aquecimento global` (pub_titulo), `mudanças climáticas`
+> (palavra_chave)"*.
 
 ---
 
