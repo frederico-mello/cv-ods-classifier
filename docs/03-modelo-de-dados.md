@@ -81,20 +81,58 @@ flowchart LR
 > pergunta: *"existe algum campo da seção X cujo texto fala de clima?"* — e o parser já
 > entregou os campos prontos, com a origem rastreável (`tag_origem`) até o XML.
 
-### As seções mais importantes
+### As seções e seus pesos (`SECTION_WEIGHTS`)
 
 Nem todo trecho do currículo vale o mesmo. O sistema dá pesos diferentes conforme a
-seção. A tabela abaixo é de **referência** — a lista definitiva vive em `SECTION_WEIGHTS`
-(`lattes_sdg/scorer.py`), e a reconciliação completa de pesos com o código é da Onda M1:
+seção — uma publicação científica sobre um tema vale mais que uma menção solta. As
+**24 entradas** abaixo são idênticas às chaves de `SECTION_WEIGHTS`
+(`lattes_sdg/scorer.py`), em ordem decrescente de peso (empates na ordem em que o
+código os declara):
 
-| Seção | Peso | Por quê |
-|-------|------|---------|
-| Linha de pesquisa | 1.0 | É o núcleo da pesquisa do autor |
-| Título de publicação | 1.0 | Publicação é evidência forte |
-| Título de projeto | 0.8 | Projeto relevante |
-| Resumo / descrição | 0.7 | Texto explicativo |
-| Formação | 0.4 | Importante, mas menos direto |
-| Menções genéricas | 0.3 | Pista fraca |
+| Chave (`SECTION_WEIGHTS`) | Peso |
+|---------------------------|------|
+| `linhaPesquisa` | 1.0 |
+| `pub_titulo` | 1.0 |
+| `pub_trabalho` | 1.0 |
+| `pub_obra` | 1.0 |
+| `projeto_descricao` | 0.9 |
+| `projeto_titulo` | 0.8 |
+| `resumo` | 0.8 |
+| `atuacao` | 0.7 |
+| `palavra_chave` | 0.7 |
+| `descricao_curriculo` | 0.7 |
+| `objetivo` | 0.6 |
+| `sinopse` | 0.6 |
+| `pub_evento` | 0.5 |
+| `formacao_area` | 0.5 |
+| `formacao_nivel` | 0.5 |
+| `descricao` | 0.5 |
+| `formacao_assunto` | 0.4 |
+| `pub_tipo` | 0.4 |
+| `formacao_titulo` | 0.4 |
+| `titulo` | 0.3 |
+| `pub_revista` | 0.3 |
+| `pub_periodico` | 0.3 |
+| `formacao_instituicao` | 0.2 |
+| `formacao_ano` | 0.1 |
+
+> **O código é a fonte da verdade.** Esta tabela é uma fotografia de `SECTION_WEIGHTS`
+> em `lattes_sdg/scorer.py`; se um dia os dois divergirem, vale o código. A seção fora
+> do mapa cai no padrão `0.3` (`SECTION_WEIGHTS.get(secao, 0.3)` em `analyze`).
+
+### Parâmetros do cálculo (constantes do scorer)
+
+Além dos pesos, três constantes de `lattes_sdg/scorer.py` governam o resultado:
+
+| Constante | Valor | O que controla |
+|-----------|-------|----------------|
+| `SATURATION_K` | `1.4` | constante da curva de saturação (`_normalize`) — quanto maior, mais pistas para chegar perto de 100 |
+| `DECAY` | `0.55` | fator de decaimento por repetição: a iª ocorrência vale `DECAY ** i` da primeira (`_raw_score`) |
+| `MAX_EVIDENCE_PER_SDG` | `6` | máximo de evidências listadas por ODS (`analyze`); a soma bruta conta todas, só a explicação encurta |
+
+> De novo: **o código é a fonte da verdade** — confira os três valores em
+> `lattes_sdg/scorer.py`. O exemplo numérico reproduzível está em
+> [04 — Algoritmo](04-algoritmo.md).
 
 ### As seções que o formato oficial abriu
 
@@ -184,8 +222,20 @@ aponta para **um único campo** e carrega quatro chaves:
 ```mermaid
 flowchart LR
     C["Campo: seção pub_titulo<br/>tag_origem DADOS-BASICOS-DO-TRABALHO"] --> E["Evidência"]
-    E["{ keyword: 'clima, aquecimento global'<br/>section: pub_titulo<br/>text: 'Aquecimento Global...'<br/>tag_origem: DADOS-BASICOS-DO-TRABALHO }"]
+    E["{ keyword: 'mudanças climáticas, aquecimento global'<br/>section: pub_titulo<br/>text: 'Aquecimento Global e Mudanças Climáticas...'<br/>tag_origem: DADOS-BASICOS-DO-TRABALHO }"]
 ```
+
+No exemplo prático do [04 — Algoritmo](04-algoritmo.md), o `Scorer.analyze` devolve
+**três** evidências para o ODS 13 — uma por campo, na ordem dos campos do currículo:
+
+| `keyword` | `section` | `text` | `tag_origem` |
+|-----------|-----------|--------|--------------|
+| `mudanças climáticas` | `linhaPesquisa` | `Mudanças Climáticas e Ecossistemas` | `LINHA-DE-PESQUISA` |
+| `aquecimento global` | `pub_titulo` | `Aquecimento Global e Biodiversidade Florestal` | `DADOS-BASICOS-DO-ARTIGO` |
+| `mudanças climáticas` | `palavra_chave` | `mudanças climáticas` | `PALAVRA-CHAVE-1` |
+
+> O comando que reproduz essas três linhas (e a nota `71.6`) está em
+> [04 — Algoritmo](04-algoritmo.md) — **o código é a fonte da verdade**.
 
 Três regras de quantidade, para a lista explicar sem poluir:
 

@@ -58,7 +58,7 @@ SECTION_WEIGHTS: Dict[str, float] = {
 MAX_EVIDENCE_PER_SDG = 6
 
 # Fator de decaimento para repetição de pistas de um mesmo ODS.
-# A 1ª ocorrência conta 100%, a 2ª 70%, a 3ª 50%, etc.
+# O iésimo multiplicador é DECAY ** i: 1ª ocorrência fator 1, 2ª 0.55, 3ª 0.3025.
 DECAY = 0.55
 
 # Constante de saturação da curva: controla quão rápido um ODS se aproxima de 100.
